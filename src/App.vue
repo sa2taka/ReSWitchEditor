@@ -60,18 +60,6 @@ export default defineComponent({
       audio.loadFile(state.info.musicFile!);
     }
 
-    const handleMusicInfo = (value: MusicInfo) => {
-      if (
-        value.name !== undefined &&
-        value.bpm !== undefined &&
-        value.musicFile !== undefined
-      ) {
-        state.info = value;
-        audio.loadFile(state.info.musicFile!);
-        localStorage.setItem('info', JSON.stringify(value));
-      }
-    };
-
     const isModalVisible = ref(false);
 
     const handleEditButtonClick = () => {
@@ -87,6 +75,19 @@ export default defineComponent({
 
     let app: CanvasApp;
 
+    const handleMusicInfo = (value: MusicInfo) => {
+      if (
+        value.name !== undefined &&
+        value.bpm !== undefined &&
+        value.musicFile !== undefined
+      ) {
+        state.info = value;
+        audio.loadFile(state.info.musicFile!);
+        app.setBpm(state.info.bpm!);
+        localStorage.setItem('info', JSON.stringify(value));
+      }
+    };
+
     const handleExpandedSwitch = (event: Event) => {
       app.setExpandedLine((event.target! as any).checked);
     };
@@ -95,8 +96,10 @@ export default defineComponent({
       if (event.keyCode === 32) {
         if (audio.isPlaying) {
           audio.pause();
+          app.stop();
           audioState.now = audio.context.currentTime;
         } else {
+          app.start();
           if (audio.source && !(audio.context.state === 'running')) {
             audio.resume();
           } else {
@@ -111,6 +114,7 @@ export default defineComponent({
         'editor-canvas'
       ) as HTMLCanvasElement;
       app = new CanvasApp(canvas, audio);
+      app.setBpm(state.info.bpm!);
       const setCanvasSize = () => {
         const width = window.innerWidth;
         const height = window.innerHeight;

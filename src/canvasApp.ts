@@ -22,8 +22,14 @@ export class CanvasApp {
   gapX = 0;
   gapY = 0;
 
+  bpm = 120;
+
+  isStarted = false;
+
   isAnimationStarted = false;
   audio: Audio;
+
+  beforeAnimationAt = 0;
 
   constructor(canvas: HTMLCanvasElement, audio: Audio) {
     this.canvas = canvas;
@@ -40,9 +46,33 @@ export class CanvasApp {
     this.drawNowLine();
   }
 
+  public start() {
+    this.isStarted = true;
+    this.animate();
+  }
+
+  public stop() {
+    this.isStarted = false;
+  }
+
+  animate(ts?: number) {
+    if (this.isStarted) {
+      this.draw();
+      this.moveWindow(ts, this.beforeAnimationAt);
+      if (ts) {
+        this.beforeAnimationAt = ts;
+      }
+      window.requestAnimationFrame(ts => this.animate(ts));
+    }
+  }
+
   public setExpandedLine(isExpandedLine: boolean) {
     this.isExpandedLine = isExpandedLine;
     this.draw();
+  }
+
+  public setBpm(bpm: number) {
+    this.bpm = bpm;
   }
 
   drawScore(originX: number) {
@@ -91,11 +121,10 @@ export class CanvasApp {
   }
 
   drawScores() {
+    const oneScoreWidth = this.lineDistance * 16 + this.scoreDistance;
     const width = this.context.canvas.clientWidth;
     const startX =
-      (this.gapX % (this.lineDistance * 16)) -
-      this.lineDistance * 16 +
-      this.leftMargin;
+      (this.gapX % oneScoreWidth) - oneScoreWidth + this.leftMargin;
     const lastX = width + this.lineDistance * 16;
     let x = startX;
     while (x < lastX) {
@@ -109,7 +138,28 @@ export class CanvasApp {
   }
 
   drawNowLine() {
-    // n
+    const { x, y } = this.convetTimeToPoint(this.audio.currentTime);
+
+    this.context.beginPath();
+    this.context.moveTo(x - 8, y);
+    this.context.lineTo(x + this.lineDistance * 15 + 8, y);
+    this.context.lineWidth = 2;
+    this.context.strokeStyle = '#FF9800';
+    this.context.stroke();
+  }
+
+  moveWindow(now?: number, beforeAt?: number) {
+    const { x } = this.convetTimeToPoint(this.audio.currentTime);
+    const width = this.context.canvas.clientWidth;
+
+    if (width / 3 < x && now && beforeAt) {
+      const dividedBy = this.isExpandedLine ? 2 : 4;
+      const oneLinePassTime = (dividedBy * 60) / this.bpm;
+      const oneScoreWidth = this.lineDistance * 16 + this.scoreDistance;
+      const movePerSecond = oneScoreWidth / oneLinePassTime;
+      const diff = (now - beforeAt) / 1000;
+      this.gapX -= movePerSecond * diff;
+    }
   }
 
   handleDrag(event: MouseEvent) {
@@ -154,9 +204,42 @@ export class CanvasApp {
     const height = this.context.canvas.clientHeight;
     const yDistance = height - this.yMargin * 2;
     const absoluteY = y - this.yMargin;
-    const onMeasureHeight = yDistance / dividedBy;
-    const yLocation = dividedBy - Math.round(absoluteY / onMeasureHeight);
+    const oneMeasureHeight = yDistance / dividedBy;
+    const yLocation = dividedBy - Math.round(absoluteY / oneMeasureHeight);
 
     return numberOfLine * dividedBy + yLocation;
+  }
+
+  convetTimeToPoint(time: number) {
+    const oneScoreWidth = this.lineDistance * 16 + this.scoreDistance;
+    const nowCountOfBeat = time * (this.bpm / 60);
+    const dividedBy = this.isExpandedLine ? 2 : 4;
+    const height = this.context.canvas.clientHeight;
+    const yDistance = height - this.yMargin * 2;
+    const oneMeasureHeight = yDistance / dividedBy;
+
+    const intCountOfBeat = Math.trunc(nowCountOfBeat);
+    const floorOfBeat = this.getAfterPoint(nowCountOfBeat);
+
+    const detailYLocation = oneMeasureHeight * floorOfBeat;
+    const beatYLocation = (yDistance / dividedBy) * intCountOfBeat;
+    const xLocation =
+      this.gapX + oneScoreWidth * Math.floor(intCountOfBeat / dividedBy);
+
+    return {
+      x: xLocation + this.leftMargin,
+      y:
+        height - ((detailYLocation + beatYLocation) % yDistance) - this.yMargin,
+    };
+  }
+
+  getAfterPoint(num: number) {
+    const arr = String(num).split('.');
+
+    if (arr[1]) {
+      return Number('0.' + arr[1]);
+    } else {
+      return 0;
+    }
   }
 }
