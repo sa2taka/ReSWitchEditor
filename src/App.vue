@@ -13,6 +13,18 @@
         <label for="toggle" class="toggle-label switch" />
       </div>
 
+      <div class="quantize">
+        <span style="margin-left: 8px;margin-right: 4px">小節数</span>
+        <select :value="state.quantize" @input="handleQuantizeSelect">
+          <option value="1">4</option>
+          <option selected value="2">8</option>
+          <option value="3">12</option>
+          <option value="4">16</option>
+          <option value="6">24</option>
+          <option value="8">32</option>
+        </select>
+      </div>
+
       <button class="btn end" @click="handleEditButtonClick">
         楽曲情報を編集する
       </button>
@@ -31,7 +43,7 @@
 import { defineComponent, onMounted, reactive, ref } from 'vue';
 import { CanvasApp } from './canvasApp';
 import MusicInfoEditor from './components/MusicInfoEditor.vue';
-import { MusicInfo } from './types';
+import { MusicInfo, Quantize } from './types';
 import { Audio } from './libs/audio';
 
 type MusicState = {
@@ -47,10 +59,11 @@ export default defineComponent({
     const infoItem = localStorage.getItem('info');
     const audio = new Audio();
 
-    const state = reactive<{ info: MusicInfo }>({
+    const state = reactive<{ info: MusicInfo; quantize: Quantize }>({
       info: infoItem
         ? JSON.parse(infoItem)
         : { name: '', bpm: 120, musicFile: '' },
+      quantize: 2,
     });
     const audioState = reactive<MusicState>({
       now: 0,
@@ -90,6 +103,14 @@ export default defineComponent({
 
     const handleExpandedSwitch = (event: Event) => {
       app.setExpandedLine((event.target! as any).checked);
+    };
+
+    const handleQuantizeSelect = (event: Event) => {
+      const value = Number(
+        (event.target! as HTMLInputElement).value
+      ) as Quantize;
+      app.setQuantize(value);
+      state.quantize = value;
     };
 
     window.addEventListener('keyup', (event: KeyboardEvent) => {
@@ -137,6 +158,7 @@ export default defineComponent({
       handleMusicInfo,
       handleModalOutClick,
       handleEditButtonClick,
+      handleQuantizeSelect,
     };
   },
 });
@@ -160,6 +182,7 @@ body {
 .button-area {
   margin: 0 64px;
   display: flex;
+  align-items: center;
 }
 
 .modal {

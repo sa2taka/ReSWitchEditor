@@ -1,11 +1,12 @@
 import { Audio } from './libs/audio';
+import { Quantize } from './types';
 
 export class CanvasApp {
   canvas!: HTMLCanvasElement;
   context!: CanvasRenderingContext2D;
 
   leftMargin = 64;
-  lineDistance = 12;
+  lineDistance = 16;
   scoreDistance = 32;
   yMargin = 32;
 
@@ -23,6 +24,7 @@ export class CanvasApp {
   gapY = 0;
 
   bpm = 120;
+  quantize: Quantize = 2;
 
   isStarted = false;
 
@@ -75,6 +77,11 @@ export class CanvasApp {
     this.bpm = bpm;
   }
 
+  public setQuantize(quantize: Quantize) {
+    this.quantize = quantize;
+    this.draw();
+  }
+
   drawScore(originX: number) {
     const height = this.context.canvas.clientHeight;
     for (let i = 0; i < 16; i++) {
@@ -89,10 +96,26 @@ export class CanvasApp {
       this.context.stroke();
     }
 
-    const distance =
-      (height - 2 * this.yMargin) / (this.isExpandedLine ? 2 : 4);
+    const quantizeDistance =
+      (height - 2 * this.yMargin) /
+      ((this.isExpandedLine ? 2 : 4) * this.quantize * 4);
     const startX = originX;
     const endX = originX + 15 * this.lineDistance;
+
+    // quantize line
+
+    const quantizeLineCount = (this.isExpandedLine ? 2 : 4) * this.quantize * 4;
+    for (let i = 0; i < quantizeLineCount; i++) {
+      this.context.beginPath();
+      this.context.moveTo(startX, i * quantizeDistance + this.yMargin);
+      this.context.lineTo(endX, i * quantizeDistance + this.yMargin);
+      this.context.lineWidth = 2;
+      this.context.strokeStyle = 'rgb(255, 255, 255, 0.5)';
+      this.context.stroke();
+    }
+
+    const distance =
+      (height - 2 * this.yMargin) / (this.isExpandedLine ? 2 : 4);
 
     const lineCount = this.isExpandedLine ? 3 : 5;
     for (let i = 0; i < lineCount; i++) {
@@ -105,8 +128,8 @@ export class CanvasApp {
           '12px Helvetica Neue,Arial,Hiragino Kaku Gothic ProN,Hiragino Sans,BIZ UDPGothic,Meiryo,sans-serif';
         this.context.fillStyle = 'rgb(255, 255, 255)';
         this.context.fillText(
-          numberOfMeasure.toString(),
-          startX - numberOfMeasure.toString().length * 8 - 4,
+          (numberOfMeasure + 1).toString(),
+          startX - (numberOfMeasure + 1).toString().length * 6 - 4,
           i * distance + this.yMargin + 4
         );
       }
