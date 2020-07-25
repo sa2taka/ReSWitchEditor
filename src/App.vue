@@ -110,7 +110,7 @@ export default defineComponent({
       const canvas = document.getElementById(
         'editor-canvas'
       ) as HTMLCanvasElement;
-      app = new CanvasApp(canvas);
+      app = new CanvasApp(canvas, audio);
       const setCanvasSize = () => {
         const width = window.innerWidth;
         const height = window.innerHeight;

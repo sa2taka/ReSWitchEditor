@@ -1,3 +1,5 @@
+import { Audio } from './libs/audio';
+
 export class CanvasApp {
   canvas!: HTMLCanvasElement;
   context!: CanvasRenderingContext2D;
@@ -20,9 +22,13 @@ export class CanvasApp {
   gapX = 0;
   gapY = 0;
 
-  constructor(canvas: HTMLCanvasElement) {
+  isAnimationStarted = false;
+  audio: Audio;
+
+  constructor(canvas: HTMLCanvasElement, audio: Audio) {
     this.canvas = canvas;
     this.context = canvas.getContext('2d')!;
+    this.audio = audio;
     this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
     this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
     this.canvas.addEventListener('mousemove', this.handleDrag.bind(this));
@@ -31,6 +37,7 @@ export class CanvasApp {
   public draw() {
     this.clearCanvas();
     this.drawScores();
+    this.drawNowLine();
   }
 
   public setExpandedLine(isExpandedLine: boolean) {
@@ -59,6 +66,21 @@ export class CanvasApp {
 
     const lineCount = this.isExpandedLine ? 3 : 5;
     for (let i = 0; i < lineCount; i++) {
+      if (i !== 0) {
+        const numberOfMeasure = this.getNumberOfMeasure(
+          startX,
+          i * distance + this.yMargin
+        );
+        this.context.font =
+          '12px Helvetica Neue,Arial,Hiragino Kaku Gothic ProN,Hiragino Sans,BIZ UDPGothic,Meiryo,sans-serif';
+        this.context.fillStyle = 'rgb(255, 255, 255)';
+        this.context.fillText(
+          numberOfMeasure.toString(),
+          startX - numberOfMeasure.toString().length * 8 - 4,
+          i * distance + this.yMargin + 4
+        );
+      }
+
       this.context.beginPath();
       this.context.moveTo(startX, i * distance + this.yMargin);
       this.context.lineTo(endX, i * distance + this.yMargin);
@@ -84,6 +106,10 @@ export class CanvasApp {
       this.drawScore(x);
       x += this.lineDistance * 16 + this.scoreDistance;
     }
+  }
+
+  drawNowLine() {
+    // n
   }
 
   handleDrag(event: MouseEvent) {
@@ -118,5 +144,19 @@ export class CanvasApp {
 
   clearCanvas() {
     this.context!.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  getNumberOfMeasure(x: number, y: number) {
+    const oneScoreWidth = this.lineDistance * 16 + this.scoreDistance;
+    const absoluteX = x - this.gapX - this.leftMargin;
+    const numberOfLine = Math.floor(absoluteX / oneScoreWidth);
+    const dividedBy = this.isExpandedLine ? 2 : 4;
+    const height = this.context.canvas.clientHeight;
+    const yDistance = height - this.yMargin * 2;
+    const absoluteY = y - this.yMargin;
+    const onMeasureHeight = yDistance / dividedBy;
+    const yLocation = dividedBy - Math.round(absoluteY / onMeasureHeight);
+
+    return numberOfLine * dividedBy + yLocation;
   }
 }
