@@ -62,7 +62,6 @@ export class CanvasApp {
       this.context.beginPath();
       this.context.moveTo(startX, i * distance + this.yMargin);
       this.context.lineTo(endX, i * distance + this.yMargin);
-      console.log(i, lineCount - 1);
       this.context.lineWidth = i === 0 || i === lineCount - 1 ? 4 : 2;
       this.context.strokeStyle = 'rgb(255, 255, 255)';
       this.context.stroke();

@@ -6,9 +6,9 @@ export interface Note {
 export type None = 'none';
 
 export interface MusicInfo {
-  name: string;
-  bpm: number;
-  musicFile: string;
+  name?: string;
+  bpm?: number;
+  musicFile?: string;
 }
 
 export interface Score {
