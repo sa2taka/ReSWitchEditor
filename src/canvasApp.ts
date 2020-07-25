@@ -40,6 +40,7 @@ export class CanvasApp {
     this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
     this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
     this.canvas.addEventListener('mousemove', this.handleDrag.bind(this));
+    this.canvas.addEventListener('click', this.handleClick.bind(this));
   }
 
   public draw() {
@@ -204,6 +205,28 @@ export class CanvasApp {
     this.draw();
   }
 
+  handleClick(event: MouseEvent) {
+    switch (event.which) {
+      case 1: {
+        this.handleLeftClick(event);
+      }
+    }
+  }
+
+  handleLeftClick(event: MouseEvent) {
+    // 8 is margin
+    const x = event.clientX;
+    const y = event.clientY - 8;
+
+    const measure = this.getNumberOfQuontize(x, y);
+    const line = this.getNumberOfLine(x);
+
+    console.log({
+      measure,
+      line,
+    });
+  }
+
   handleMouseDown(event: MouseEvent) {
     this.isDragging = true;
     this.draggingStartX = event.offsetX;
@@ -228,7 +251,10 @@ export class CanvasApp {
     const yDistance = height - this.yMargin * 2;
     const absoluteY = y - this.yMargin;
     const oneMeasureHeight = yDistance / dividedBy;
-    const yLocation = dividedBy - Math.round(absoluteY / oneMeasureHeight);
+    const oneQuaitizeHeight = oneMeasureHeight / (this.quantize * 4);
+    const yLocation =
+      dividedBy -
+      Math.ceil((absoluteY - oneQuaitizeHeight / 2) / oneMeasureHeight);
 
     return numberOfLine * dividedBy + yLocation;
   }
@@ -264,5 +290,39 @@ export class CanvasApp {
     } else {
       return 0;
     }
+  }
+
+  getNumberOfQuontize(x: number, y: number) {
+    const margin = 16;
+    const oneScoreWidth = this.lineDistance * 16 + this.scoreDistance;
+    const absoluteX = x - this.gapX - this.leftMargin + margin;
+    const numberOfLine = Math.floor(absoluteX / oneScoreWidth);
+
+    const dividedBy = (this.isExpandedLine ? 2 : 4) * this.quantize * 4;
+    const height = this.context.canvas.clientHeight;
+    const yDistance = height - this.yMargin * 2;
+    const absoluteY = y - this.yMargin;
+    const oneMeasureHeight = yDistance / (this.isExpandedLine ? 2 : 4);
+    const oneQuaitizeHeight = oneMeasureHeight / (this.quantize * 4);
+    const yLocation = dividedBy - Math.round(absoluteY / oneQuaitizeHeight);
+
+    if (
+      absoluteY + oneQuaitizeHeight / 2 < 0 ||
+      yDistance < absoluteY - oneQuaitizeHeight / 2
+    ) {
+      return -1;
+    }
+    return numberOfLine * dividedBy + yLocation;
+  }
+
+  getNumberOfLine(x: number) {
+    const margin = 8;
+    const oneScoreWidth = this.lineDistance * 16 + this.scoreDistance;
+    const absoluteX = x - this.gapX - this.leftMargin + margin;
+    const numberOfScoreLine = Math.floor(absoluteX / oneScoreWidth);
+    const scoreLineStartX = numberOfScoreLine * oneScoreWidth;
+    const xInScoreLine = absoluteX - scoreLineStartX;
+
+    return Math.floor(xInScoreLine / this.lineDistance);
   }
 }
