@@ -25,6 +25,18 @@
         </select>
       </div>
 
+      <div class="default-note">
+        <span style="margin-left: 8px;margin-right: 4px">デフォルトノート</span>
+        <select :value="state.defaultNote" @input="handleDefaultNoteChange">
+          <option selected value="red-single">赤単</option>
+          <option value="blue-single">青単</option>
+          <option value="purple-single">紫単</option>
+          <option value="red-slide">赤スラ</option>
+          <option value="blue-slide">青スラ</option>
+          <option value="purple-slide">紫スラ</option>
+        </select>
+      </div>
+
       <button class="btn end" @click="handleEditButtonClick">
         楽曲情報を編集する
       </button>
@@ -51,6 +63,14 @@ type MusicState = {
   now: number;
 };
 
+type DefaultNote =
+  | 'red-single'
+  | 'blue-single'
+  | 'purple-single'
+  | 'red-slide'
+  | 'blue-slide'
+  | 'purple-slide';
+
 export default defineComponent({
   name: 'App',
   components: {
@@ -61,11 +81,16 @@ export default defineComponent({
     const audio = new Audio();
     const notesManager = new NotesManager();
 
-    const state = reactive<{ info: MusicInfo; quantize: Quantize }>({
+    const state = reactive<{
+      info: MusicInfo;
+      quantize: Quantize;
+      defaultNote: DefaultNote;
+    }>({
       info: infoItem
         ? JSON.parse(infoItem)
         : { name: '', bpm: 120, musicFile: '' },
       quantize: 2,
+      defaultNote: 'red-single',
     });
     const audioState = reactive<MusicState>({
       now: 0,
@@ -115,6 +140,12 @@ export default defineComponent({
       state.quantize = value;
     };
 
+    const handleDefaultNoteChange = (event: Event) => {
+      const value = (event.target! as HTMLInputElement).value as DefaultNote;
+      state.defaultNote = value;
+      notesManager.setDefaultNote(value);
+    };
+
     window.addEventListener('keyup', (event: KeyboardEvent) => {
       if (event.keyCode === 32) {
         if (audio.isPlaying) {
@@ -161,6 +192,7 @@ export default defineComponent({
       handleModalOutClick,
       handleEditButtonClick,
       handleQuantizeSelect,
+      handleDefaultNoteChange,
     };
   },
 });
