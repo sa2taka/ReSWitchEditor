@@ -1,5 +1,6 @@
 import { Audio } from './libs/audio';
-import { Quantize } from './types';
+import { Quantize, Note } from './types';
+import { NotesManager } from './libs/notesManager';
 
 export class CanvasApp {
   canvas!: HTMLCanvasElement;
@@ -33,20 +34,54 @@ export class CanvasApp {
 
   beforeAnimationAt = 0;
 
-  constructor(canvas: HTMLCanvasElement, audio: Audio) {
+  notesManager: NotesManager;
+
+  blueSingleNote!: HTMLImageElement;
+  redSingleNote!: HTMLImageElement;
+  purpleSingleNote!: HTMLImageElement;
+  blueSlideNote!: HTMLImageElement;
+  redSlideNote!: HTMLImageElement;
+  purpleSlideNote!: HTMLImageElement;
+
+  public onLeftClick?: (measure: number, line: number) => void;
+  public onRightClick?: (time: number) => void;
+
+  constructor(
+    canvas: HTMLCanvasElement,
+    audio: Audio,
+    notesManager: NotesManager
+  ) {
     this.canvas = canvas;
     this.context = canvas.getContext('2d')!;
     this.audio = audio;
+    this.notesManager = notesManager;
     this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
     this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
     this.canvas.addEventListener('mousemove', this.handleDrag.bind(this));
     this.canvas.addEventListener('click', this.handleClick.bind(this));
+    this.initImage();
+  }
+
+  initImage() {
+    this.blueSingleNote = new Image();
+    this.blueSingleNote.src = '/blue_note.png';
+    this.redSingleNote = new Image();
+    this.redSingleNote.src = '/red_note.png';
+    this.purpleSingleNote = new Image();
+    this.purpleSingleNote.src = '/purple_note.png';
+    this.blueSlideNote = new Image();
+    this.blueSlideNote.src = '/blue_slide.png';
+    this.redSlideNote = new Image();
+    this.redSlideNote.src = '/red_slide.png';
+    this.purpleSlideNote = new Image();
+    this.purpleSlideNote.src = '/purple_slide.png';
   }
 
   public draw() {
     this.clearCanvas();
     this.drawScores();
     this.drawNowLine();
+    this.drawNotes();
   }
 
   public start() {
@@ -60,8 +95,8 @@ export class CanvasApp {
 
   animate(ts?: number) {
     if (this.isStarted) {
-      this.draw();
       this.moveWindow(ts, this.beforeAnimationAt);
+      this.draw();
       if (ts) {
         this.beforeAnimationAt = ts;
       }
@@ -161,6 +196,39 @@ export class CanvasApp {
     }
   }
 
+  drawNotes() {
+    this.notesManager.notes.forEach((value, index) => {
+      if (value === 'none') {
+        return;
+      }
+      const { x, y } = this.getPointFromNoteLocation(index, value.line);
+
+      let noteImage!: HTMLImageElement;
+      if (value.color === 'red' && value.type === 'single') {
+        noteImage = this.redSingleNote;
+      } else if (value.color === 'blue' && value.type === 'single') {
+        noteImage = this.blueSingleNote;
+      } else if (value.color === 'purple' && value.type === 'single') {
+        noteImage = this.purpleSingleNote;
+      } else if (value.color === 'red' && value.type === 'sequence') {
+        noteImage = this.redSlideNote;
+      } else if (value.color === 'blue' && value.type === 'sequence') {
+        noteImage = this.blueSlideNote;
+      } else if (value.color === 'purple' && value.type === 'sequence') {
+        noteImage = this.purpleSlideNote;
+      }
+      const width = 16;
+      const height = 8;
+      this.context.drawImage(
+        noteImage,
+        x - width / 2,
+        y - height / 2,
+        width,
+        height
+      );
+    });
+  }
+
   drawNowLine() {
     const { x, y } = this.convetTimeToPoint(this.audio.currentTime);
 
@@ -190,9 +258,12 @@ export class CanvasApp {
     if (!this.isDragging) {
       return;
     }
-    this.isDragged = true;
+
     const diffX = event.offsetX - this.draggingStartX;
     const diffY = event.offsetY - this.draggingStartY;
+    if (Math.abs(diffX) > 1) {
+      this.isDragged = true;
+    }
     this.draggingStartX = event.offsetX;
     this.draggingStartY = event.offsetY;
     this.gapX += diffX;
@@ -206,11 +277,16 @@ export class CanvasApp {
   }
 
   handleClick(event: MouseEvent) {
+    if (this.isDragged) {
+      this.isDragged = false;
+      return;
+    }
     switch (event.which) {
       case 1: {
         this.handleLeftClick(event);
       }
     }
+    this.draw();
   }
 
   handleLeftClick(event: MouseEvent) {
@@ -221,10 +297,16 @@ export class CanvasApp {
     const measure = this.getNumberOfQuontize(x, y);
     const line = this.getNumberOfLine(x);
 
-    console.log({
+    if (line < 0 || 15 < line) {
+      return;
+    }
+
+    this.notesManager.setNote(measure, line, this.quantize);
+
+    return {
       measure,
       line,
-    });
+    };
   }
 
   handleMouseDown(event: MouseEvent) {
@@ -324,5 +406,26 @@ export class CanvasApp {
     const xInScoreLine = absoluteX - scoreLineStartX;
 
     return Math.floor(xInScoreLine / this.lineDistance);
+  }
+
+  getPointFromNoteLocation(index: number, line: number) {
+    const dividedBy = 96;
+    const lineCount = this.isExpandedLine ? 2 : 4;
+    const scoreLine = Math.floor(index / (dividedBy * lineCount));
+    const yLocation =
+      dividedBy * lineCount - (index - scoreLine * dividedBy * lineCount);
+
+    const height = this.context.canvas.clientHeight;
+    const yDistance = height - this.yMargin * 2;
+
+    const unitHeight = yDistance / (dividedBy * lineCount);
+    const y = yLocation * unitHeight + this.yMargin;
+
+    const oneScoreWidth = this.lineDistance * 16 + this.scoreDistance;
+    const lineStartX = oneScoreWidth * scoreLine;
+    const x =
+      line * this.lineDistance + lineStartX + this.leftMargin + this.gapX;
+
+    return { x, y };
   }
 }

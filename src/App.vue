@@ -45,6 +45,7 @@ import { CanvasApp } from './canvasApp';
 import MusicInfoEditor from './components/MusicInfoEditor.vue';
 import { MusicInfo, Quantize } from './types';
 import { Audio } from './libs/audio';
+import { NotesManager } from './libs/notesManager';
 
 type MusicState = {
   now: number;
@@ -58,6 +59,7 @@ export default defineComponent({
   setup() {
     const infoItem = localStorage.getItem('info');
     const audio = new Audio();
+    const notesManager = new NotesManager();
 
     const state = reactive<{ info: MusicInfo; quantize: Quantize }>({
       info: infoItem
@@ -134,7 +136,7 @@ export default defineComponent({
       const canvas = document.getElementById(
         'editor-canvas'
       ) as HTMLCanvasElement;
-      app = new CanvasApp(canvas, audio);
+      app = new CanvasApp(canvas, audio, notesManager);
       app.setBpm(state.info.bpm!);
       const setCanvasSize = () => {
         const width = window.innerWidth;
